@@ -11,7 +11,7 @@ class PD_Controller(object):
         self.D = D_gain
         self.L = L
         self.prev_error = 0.0
-        self.u = 0.0  # steering angle
+        self.u = 0.0  # steering angle lsh
 
     def ControllerInput(self, coeff, Vx, lookahead=2.0):
         a = coeff[0][0]
