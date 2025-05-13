@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 class KalmanFilter:
-    def __init__(self, y_Measure_init, step_time=0.1, m=10.0, b=2.0, k=100.0,
+    def __init__(self, y_Measure_init, step_time=0.01, m=10.0, b=2.0, k=100.0,
                  Q_x=0.02, Q_v=0.05, R=0.1, errorCovariance_init=10.0):
         self.dt = step_time
 

@@ -6,11 +6,31 @@ from ex01_PathPlanning_BothLane import Global2Local, Polyfit, VehicleModel_Lat, 
 class LaneWidthEstimator(object):
     def __init__(self, Lw_init=3.0):
         self.Lw = Lw_init
-    # Code
+
+    def update(self, coeff_L, coeff_R, isLaneValid_L, isLaneValid_R):
+        if isLaneValid_L and isLaneValid_R:
+            # 두 차선 다 인식된 경우: y값 차이로 차선 너비 갱신
+            y_center = 0.0
+            y_L = np.polyval(coeff_L, y_center)
+            y_R = np.polyval(coeff_R, y_center)
+            self.Lw = abs(y_R - y_L)
+
 
 def EitherLane2Path(coeff_L, coeff_R, isLaneValid_L, isLaneValid_R, Lw):
-    # Code
-    return 0
+    
+    if isLaneValid_L and isLaneValid_R:
+        coeff_path = 0.5 * (np.array(coeff_L) + np.array(coeff_R))
+    elif isLaneValid_L:
+        coeff_path = np.copy(coeff_L)
+        coeff_path[-1] -= Lw / 2.0  # 왼쪽 차선 기준 
+    elif isLaneValid_R:
+        coeff_path = np.copy(coeff_R)
+        coeff_path[-1] += Lw / 2.0  # 오른쪽 차선 기준 
+    else:
+        coeff_path = np.zeros(4)
+    return coeff_path
+
+
         
 if __name__ == "__main__":
     step_time = 0.1
@@ -34,6 +54,18 @@ if __name__ == "__main__":
         # Lane Info
         X_ref = np.arange(ego_vehicle.X, ego_vehicle.X+5.0, 1.0)
         Y_ref_L, Y_ref_R, isLaneValid_L, isLaneValid_R = lane(X_ref)
+
+        # === 2. 유효성 직접 판단 ===
+
+        # 왼쪽 차선 유효성 판단
+        valid_ratio = np.count_nonzero(np.abs(Y_ref_L) > 0.1) / len(Y_ref_L)
+        isLaneValid_L = (valid_ratio > 0.8) and (np.max(np.abs(Y_ref_L)) > 0.5)
+
+        # 오른쪽 차선 유효성 판단
+        valid_ratio_R = np.count_nonzero(np.abs(Y_ref_R) > 0.05) / len(Y_ref_R)
+        isLaneValid_R = (valid_ratio_R > 0.6) and (np.max(np.abs(Y_ref_R)) > 0.2)
+
+
         # Global points (front 5 meters from the ego vehicle)
         global_points_L = np.transpose(np.array([X_ref, Y_ref_L])).tolist()
         global_points_R = np.transpose(np.array([X_ref, Y_ref_R])).tolist()
@@ -49,7 +81,12 @@ if __name__ == "__main__":
         # Controller input
         controller.ControllerInput(coeff_path, Vx)
         ego_vehicle.update(controller.u, Vx)
+
+        print(f"[{i:03d}] Lw = {LaneWidth.Lw:.2f}")
+
         
+        Y_ref_L, Y_ref_R, _, _ = lane(X_ref)
+
     plt.figure(1, figsize=(13,2))
     plt.plot(X_lane, Y_lane_L,'k--')
     plt.plot(X_lane, Y_lane_R,'k--',label = "Reference")
