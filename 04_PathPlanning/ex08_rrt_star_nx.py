@@ -14,18 +14,34 @@ class RRTStar(object):
     # Random point generation
     def sample_free(self, obstacles, space):
         min_x, max_x, min_y, max_y = space
-        # Code
+        if np.random.rand() < self.config["goal_sample_rate"]:
+            return np.array(self.goal)
+        rand_x = np.random.uniform(min_x, max_x)
+        rand_y = np.random.uniform(min_y, max_y)
         return np.array([rand_x, rand_y])
 
     # Search nearest node
     def get_nearest(self, rand_node):
-        # Code
+        min_dist = float('inf')
+        nearest_node_id = None
+        for node_id in self.G.nodes:
+            node = self.get_node(node_id)
+            dist = np.linalg.norm(rand_node - node)
+            if dist < min_dist:
+                min_dist = dist
+                nearest_node_id = node_id
         return nearest_node_id
 
     # Node connection
     def steer(self, node_from, node_to, u=None):
-        # Code
-        return new_x, new_y
+        eta = self.config["eta"]
+        direction = node_to - node_from
+        dist = np.linalg.norm(direction)
+        if dist < eta:
+            return node_to
+        direction = direction / dist
+        new_node = node_from + eta * direction
+        return new_node
 
     # Returns node(2d-array with position info.) corresponding to the node id
     def get_node(self, node_id):
@@ -34,15 +50,26 @@ class RRTStar(object):
 
     # Collision Check
     def is_collision_free(self, node_from, node_to, obstacles, step=0.2):
-        # Code
-        # Collision check step size : u
-        # Collision check : path(connection) between 2 nodess
-        return False
+        direction = node_to - node_from
+        dist = np.linalg.norm(direction)
+        direction = direction / dist
+        for i in np.arange(0, dist, step):
+            point = node_from + i * direction
+            for obs in obstacles:
+                if obs.is_inside(point[0], point[1]):
+                    return False
+        return True
 
     # Find adjacent nodes
     def get_near_node_ids(self, new_node, draw):
-        # Code
-        # Recommendation : Searching distance proportional to log(# of nodes in tree)/(# of nodes in tree)
+        n = len(self.G.nodes)
+        r = min(self.config["gamma_rrt_star"] * np.sqrt(np.log(n) / n), self.config["eta"])
+        near_node_ids = []
+        for node_id in self.G.nodes:
+            node = self.get_node(node_id)
+            dist = np.linalg.norm(new_node - node)
+            if dist < r:
+                near_node_ids.append(node_id)
         return near_node_ids
 
     # Add node to tree
@@ -55,7 +82,9 @@ class RRTStar(object):
 
     # Calculate the distance between 2 nodes
     def get_distance(self, node_from_id, node_to_id):
-        # Code
+        node_from = self.get_node(node_from_id)
+        node_to = self.get_node(node_to_id)
+        dist = np.linalg.norm(node_to - node_from)
         return dist
 
     # Add edge(Connection) between 2 nodes
@@ -177,8 +206,6 @@ if __name__ == '__main__':
             xs.append(node['x'])
             ys.append(node['y'])
         plt.plot(xs, ys, 'r-', lw=3)
-
-
 
     plt.plot(start[0], start[1], 'ro')
     plt.plot(goal[0], goal[1], 'bx')
